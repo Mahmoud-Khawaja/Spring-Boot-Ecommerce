@@ -1,59 +1,55 @@
 package com.ecommerce.project.service;
 
+import com.ecommerce.project.exception.APIException;
+import com.ecommerce.project.exception.ResourceNotFoundException;
 import com.ecommerce.project.model.Category;
-import org.springframework.http.HttpStatus;
+import com.ecommerce.project.repository.CategoryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
+
 import java.util.List;
-import java.util.Optional;
 
 @Service
-public class CategoryServiceImpl implements CategoryService{
-    private List<Category> categories = new ArrayList<>();
-    private Long nextCategoryId = 1L;
+public class CategoryServiceImpl implements CategoryService {
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Override
     public Category updateCategory(Category category, Long id) {
-        Optional<Category> optionalCategory = categories.stream()
-                .filter(c -> c.getId().equals(id))
-                .findFirst();
-
-        if (optionalCategory.isPresent()) {
-            Category existingCategory = optionalCategory.get();
-            existingCategory.setName(category.getName());
-            // Save or persist changes if necessary
-            return existingCategory;
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found!");
-        }
+        return categoryRepository.findById(id)
+                .map(existingCategory -> {
+                    existingCategory.setName(category.getName());
+                    return categoryRepository.save(existingCategory);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Category","CategoryId",id));
     }
 
     @Override
     public String deleteCategory(Long id) {
-        Category category = categories.stream()
-                .filter(c -> c.getId().equals(id))
-                .findFirst()
-                .orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found!"));
-
-        categories.remove(category);
-        return "category with id " + id + " deleted!";
+        if (!categoryRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Category","categoryId",id);
+        }
+        categoryRepository.deleteById(id);
+        return "Category with id " + id + " deleted!";
     }
 
     @Override
-    public List<Category> getAllCategories(){
+    public List<Category> getAllCategories() {
+        List<Category>categories = categoryRepository.findAll();
+        if(categories.isEmpty()){
+            throw new APIException("NO categories till now ");
+        }
         return categories;
     }
 
     @Override
-    public String createCategory(Category category){
-        category.setId(nextCategoryId++);
-        categories.add(category);
-        return "category added!";
+    public String createCategory(Category category) {
+        Category savedCategory = categoryRepository.findByName(category.getName());
+        if(savedCategory!=null){
+            throw new APIException("this category: "+ savedCategory.getName()+ " already exist!");
+        }
+        categoryRepository.save(category);
+        return "Category added!";
     }
 }
