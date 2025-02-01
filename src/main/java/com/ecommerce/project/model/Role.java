@@ -12,6 +12,7 @@ import lombok.ToString;
 @Data
 @Table(name = "roles")
 public class Role {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "role_id")
@@ -20,11 +21,9 @@ public class Role {
     @ToString.Exclude
     @Enumerated(EnumType.STRING)
     @Column(length = 20, name = "role_name")
-    private AppRoles role_name;
+    private AppRoles roleName;
 
-    public Role(AppRoles role_name) {
-
+    public Role(AppRoles roleName) {
+        this.roleName = roleName;
     }
-
-
 }
